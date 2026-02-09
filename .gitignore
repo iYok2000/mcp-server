@@ -57,3 +57,4 @@ Icon
 *.tmp
 .env
 .env.local
+data/

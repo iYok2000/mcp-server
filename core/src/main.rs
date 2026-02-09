@@ -1,6 +1,8 @@
 use rusqlite::{Connection, params};
 use serde::{Deserialize, Serialize};
+use std::env;
 use std::io::{self, BufRead};
+use std::path::PathBuf;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 enum State {
@@ -125,7 +127,12 @@ fn handle(req: Request, conn: &Connection) -> Response {
 }
 
 fn main() {
-    let conn = Connection::open("mcp.db").unwrap();
+    // Prefer MCP_DB_PATH so DB location does not depend on process cwd (e.g. when
+    // spawned from another workspace). Default "mcp.db" for backward compatibility.
+    let db_path: PathBuf = env::var("MCP_DB_PATH")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| PathBuf::from("mcp.db"));
+    let conn = Connection::open(&db_path).unwrap();
     init_db(&conn);
 
     let stdin = io::stdin();

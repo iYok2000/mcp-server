@@ -1,106 +1,42 @@
-# MCP Architecture – Quick Read (Engineer / AI)
-**Updated (Cursor + Rust Core + TestSprite)**
+# MCP Setup Guide
 
----
+## MCP Servers ที่ใช้
 
-## 🎯 Goal
+| Server | Tools | สถานะ |
+|--------|-------|-------|
+| **TestSprite** | bootstrap, generate tests, run tests, etc. | ทำงานได้ |
+| **mcp** | full, approve, research, review | ต้องเปิด workspace นี้ |
 
-ควบคุม workflow การพัฒนา software ให้:
+## การเปิดใช้งาน mcp-research
 
-- deterministic
-- audit-able
-- ไม่มีใครข้ามขั้น
-- มนุษย์ต้อง approve ก่อนเสมอ
+1. **เปิด workspace ให้ถูก**
+   - ต้องเปิดโฟลเดอร์ `account-stock-fe` เป็น root ของ workspace
+   - เพื่อให้ Cursor โหลด `.cursor/mcp.json`
 
-Workflow หลัก:
+2. **ตรวจสอบ .env**
+   - มีไฟล์ `/Users/yokky/Documents/mcp-server/mcp-server/.env`
+   - ต้องมี `OPENAI_API_KEY=...` (ใช้สำหรับ research, review)
 
-research → spec → coding → test → review → done
+3. **รีสตาร์ท Cursor** หลังแก้ mcp.json หรือ server
 
-> AI ช่วยคิดได้  
-> QA รันเทสต์ได้  
-> แต่ **ตัดสินใจไม่ได้**
+## ทดสอบ mcp server ด้วยตัวเอง
 
----
+```bash
+cd /Users/yokky/Documents/mcp-server/mcp-server/control
+echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' | uv run python server.py
+# ควรได้ {"jsonrpc":"2.0","id":1,"result":{...}}
+```
 
-## 🧠 Roles & Responsibilities
+## Deploy (Docker + env)
 
-### Cursor
-- Entry point เดียวของมนุษย์
-- Chat + IDE
-- Orchestrates intent ไปยัง MCP / TestSprite / GPT
-- ไม่ตัดสินใจเอง
+- **Path กำหนดผ่าน env** — เวลา deploy ใช้ `MCP_DB_PATH` และ `MCP_CORE_BIN` ได้ ไม่ต้องพึ่ง cwd
+- **.env.example** — copy เป็น `.env` แล้วใส่ `OPENAI_API_KEY` (และ override path ถ้าต้องการ)
+- **Docker**
+  - build: `docker build -t mcp-control .`
+  - run: ใช้ `docker compose up -d` (อ่าน `.env` และ mount `./data` เป็นที่เก็บ DB)
+  - ใน container ใช้ `MCP_DB_PATH=/data/mcp.db`, `MCP_CORE_BIN=/app/core` (กำหนดใน Dockerfile/docker-compose)
 
----
+## เคล็ดลับ
 
-### MCP Server (ของเรา)
-- Control Plane
-- Source of truth ของ state
-- บังคับ rule + approval gate
-- ไม่เขียนโค้ด
-- ไม่รันเทสต์
-- ไม่ตัดสินใจด้วย AI
-
----
-
-### Rust Core
-- State machine
-- Approval gate
-- Deterministic rules
-- Persistence (SQLite)
-- ไม่มี heuristic / ไม่มี ML
-
-> Rust core = authority จริง  
-> Control layer = adapter เท่านั้น
-
----
-
-### GPT
-- Research
-- Spec
-- Review
-- Advisory only
-- ไม่มี authority
-
----
-
-### TestSprite
-- QA engine
-- Run / generate tests
-- รายงานผล test
-- ไม่ควบคุม workflow
-
----
-
-### Human
-- เขียนโค้ด
-- approve / reject เท่านั้น
-- Authority สูงสุด
-
----
-
-## 🧱 System Architecture
-
-Cursor (Chat / IDE)
-│
-├── MCP Control (stdin/stdout)
-│     └── Rust Core (State + Gate)
-│           └── SQLite
-│
-└── TestSprite (QA)
-
----
-
-## 🔑 Intents (What MCP Understands)
-
-All commands are sent via Cursor chat.
-
-- research → request AI research
-- spec → request spec + test design
-- full → decide next legal step based on state
-- approve → human approval only
-- reject → reset / reject feature
-- status (optional) → read-only state
-- coding (optional) → human signals coding start
-
-Example:
-
+- ถ้าเห็นแค่ TestSprite tools → เช็ค Output panel หา log ของ "mcp" หรือ "mcp-control-plane"
+- ถ้า mcp โหลดไม่สำเร็จ → มักเกิดจาก path ผิด หรือ OPENAI_API_KEY ไม่พบ

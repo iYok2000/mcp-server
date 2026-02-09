@@ -1,0 +1,17 @@
+# MCP control-plane server (Python + Rust core)
+# Usage: copy .env.example to .env, set OPENAI_API_KEY, then:
+#   docker compose up -d
+# DB is persisted in ./data (bind mount).
+
+services:
+  mcp:
+    build: .
+    image: mcp-control:latest
+    env_file: .env
+    environment:
+      MCP_DB_PATH: /data/mcp.db
+      MCP_CORE_BIN: /app/core
+    volumes:
+      - ./data:/data
+    stdin_open: true
+    tty: true
